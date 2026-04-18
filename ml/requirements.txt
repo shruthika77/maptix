@@ -1,0 +1,26 @@
+# ML Service Dependencies
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+
+# ML Frameworks
+torch==2.3.1
+torchvision==0.18.1
+onnxruntime==1.18.0
+
+# Computer Vision
+opencv-python-headless==4.10.0.84
+Pillow==10.3.0
+numpy==1.26.4
+
+# Models
+transformers==4.41.2
+ultralytics==8.2.28
+
+# OCR
+paddlepaddle==2.6.1
+paddleocr==2.7.3
+
+# Utilities
+structlog==24.2.0
+httpx==0.27.0

@@ -1,0 +1,440 @@
+openapi: "3.1.0"
+info:
+  title: SpatialForge API
+  version: "1.0.0"
+  description: |
+    REST API for the SpatialForge Indoor Mapping & 3D Reconstruction Platform.
+    
+    ## Authentication
+    All endpoints require a Bearer JWT token in the Authorization header.
+    Obtain tokens via /auth/login or /auth/oauth/{provider}.
+    
+    ## Processing Flow
+    1. Create a project (POST /projects)
+    2. Upload input files (POST /projects/{id}/files)
+    3. Start processing (POST /projects/{id}/process)
+    4. Monitor progress (GET /projects/{id}/jobs/{jobId} or WebSocket)
+    5. Retrieve results (GET /projects/{id}/model)
+    6. Export (GET /projects/{id}/export?format=gltf)
+
+servers:
+  - url: https://api.spatialforge.io/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+paths:
+  /auth/register:
+    post:
+      summary: Register new user
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                name: { type: string }
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      summary: Login with credentials
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /projects:
+    get:
+      summary: List all projects
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [created_at, updated_at, name] }
+      responses:
+        "200":
+          description: Project list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  projects:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Project"
+                  total: { type: integer }
+                  page: { type: integer }
+
+    post:
+      summary: Create new project
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 100 }
+                description: { type: string, maxLength: 500 }
+                building_type:
+                  type: string
+                  enum: [residential_apartment, residential_house, commercial_office, retail, hospitality, healthcare, educational, industrial, mixed_use, unknown]
+                settings:
+                  $ref: "#/components/schemas/ProjectSettings"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{projectId}:
+    get:
+      summary: Get project details
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{projectId}/files:
+    post:
+      summary: Upload input file(s)
+      tags: [Files]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Supported: JPG, PNG, TIFF, PDF, DXF, DWG, IFC, LAS, LAZ, E57, JSON"
+                file_type:
+                  type: string
+                  enum: [floor_plan_image, pdf_blueprint, cad_file, bim_file, room_photo, lidar_scan, ar_scan, panorama_360, hand_sketch, text_description]
+                  description: "Optional — auto-detected if not provided"
+                floor_level:
+                  type: integer
+                  description: "Floor number this file belongs to (0 = ground)"
+                scale_meters_per_pixel:
+                  type: number
+                  description: "Manual scale override"
+      responses:
+        "201":
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedFile"
+
+  /projects/{projectId}/process:
+    post:
+      summary: Start processing pipeline
+      tags: [Processing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pipeline:
+                  type: string
+                  enum: [full, detection_only, 3d_only]
+                  default: full
+                  description: |
+                    full: complete pipeline (2D detection + 3D generation)
+                    detection_only: only run 2D analysis
+                    3d_only: only run 3D generation (requires existing spatial model)
+                options:
+                  type: object
+                  properties:
+                    wall_detection_method:
+                      type: string
+                      enum: [auto, rule_based, ml_based]
+                      default: auto
+                    generate_textures:
+                      type: boolean
+                      default: false
+                    target_lod:
+                      type: string
+                      enum: [low, medium, high]
+                      default: medium
+                    default_wall_height_m:
+                      type: number
+                      default: 2.7
+      responses:
+        "202":
+          description: Processing started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessingJob"
+
+  /projects/{projectId}/jobs/{jobId}:
+    get:
+      summary: Get processing job status
+      tags: [Processing]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessingJob"
+
+  /projects/{projectId}/model:
+    get:
+      summary: Get the unified spatial model
+      tags: [Model]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Unified spatial model (JSON)
+          content:
+            application/json:
+              schema:
+                description: "See spatial-model.schema.json for full schema"
+                type: object
+
+    put:
+      summary: Update spatial model (manual edits)
+      tags: [Model]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Partial update — only include changed elements"
+      responses:
+        "200":
+          description: Model updated
+
+  /projects/{projectId}/export:
+    get:
+      summary: Export model in specified format
+      tags: [Export]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [gltf, glb, obj, fbx, dxf, svg, pdf, ifc, usdz, png, stl]
+        - name: options
+          in: query
+          schema:
+            type: string
+            description: "JSON-encoded export options"
+      responses:
+        "200":
+          description: Export file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
+  /projects/{projectId}/model/regenerate-3d:
+    post:
+      summary: Regenerate 3D model from current spatial model
+      tags: [Model]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                textures: { type: boolean, default: true }
+                lod: { type: string, enum: [low, medium, high], default: medium }
+                wall_height_m: { type: number }
+      responses:
+        "202":
+          description: 3D regeneration started
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, default: "bearer" }
+        expires_in: { type: integer, description: "Seconds until expiration" }
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        name: { type: string }
+        created_at: { type: string, format: date-time }
+
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        building_type: { type: string }
+        status:
+          type: string
+          enum: [created, uploading, processing, completed, error]
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/UploadedFile"
+        has_spatial_model: { type: boolean }
+        has_3d_model: { type: boolean }
+        thumbnail_url: { type: string, format: uri }
+        settings:
+          $ref: "#/components/schemas/ProjectSettings"
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ProjectSettings:
+      type: object
+      properties:
+        default_wall_height_m: { type: number, default: 2.7 }
+        default_wall_thickness_m: { type: number, default: 0.15 }
+        unit_system: { type: string, enum: [metric, imperial], default: metric }
+        building_convention: { type: string, enum: [us, european, japanese, auto], default: auto }
+
+    UploadedFile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        filename: { type: string }
+        file_type: { type: string }
+        detected_type: { type: string }
+        size_bytes: { type: integer }
+        floor_level: { type: integer }
+        status: { type: string, enum: [uploaded, processing, processed, error] }
+        url: { type: string, format: uri }
+        uploaded_at: { type: string, format: date-time }
+
+    ProcessingJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [queued, preprocessing, detecting, analyzing, generating_3d, post_processing, completed, failed]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: "Processing progress percentage"
+        current_stage: { type: string }
+        stages:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              status: { type: string, enum: [pending, running, completed, failed, skipped] }
+              progress: { type: number }
+              started_at: { type: string, format: date-time }
+              completed_at: { type: string, format: date-time }
+              error: { type: string }
+        result:
+          type: object
+          properties:
+            walls_detected: { type: integer }
+            rooms_detected: { type: integer }
+            doors_detected: { type: integer }
+            windows_detected: { type: integer }
+            total_area_sqm: { type: number }
+            average_confidence: { type: number }
+            model_url: { type: string, format: uri }
+            model_3d_url: { type: string, format: uri }
+        error: { type: string }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }

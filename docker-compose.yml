@@ -1,0 +1,167 @@
+version: "3.9"
+
+services:
+  # ═══════════════════════════════════════════
+  # API Gateway & Backend
+  # ═══════════════════════════════════════════
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://spatialforge:spatialforge@postgres:5432/spatialforge
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=spatialforge
+      - JWT_SECRET=change-me-in-production-use-a-real-secret
+      - ENVIRONMENT=development
+      - ML_SERVICE_URL=http://ml-worker:8001
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ═══════════════════════════════════════════
+  # Celery Worker (Processing Pipeline)
+  # ═══════════════════════════════════════════
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://spatialforge:spatialforge@postgres:5432/spatialforge
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=spatialforge
+      - ML_SERVICE_URL=http://ml-worker:8001
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - api
+      - redis
+    command: celery -A app.worker worker --loglevel=info --concurrency=2
+
+  # ═══════════════════════════════════════════
+  # ML Worker (GPU Processing)
+  # ═══════════════════════════════════════════
+  ml-worker:
+    build:
+      context: ./ml
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - MODEL_DIR=/models
+      - DEVICE=cpu  # Change to 'cuda' for GPU
+    volumes:
+      - ./ml:/app
+      - ml-models:/models
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    # Uncomment for GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # ═══════════════════════════════════════════
+  # Frontend (React + Three.js)
+  # ═══════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+  # ═══════════════════════════════════════════
+  # Database (PostgreSQL + PostGIS)
+  # ═══════════════════════════════════════════
+  postgres:
+    image: postgis/postgis:16-3.4
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=spatialforge
+      - POSTGRES_PASSWORD=spatialforge
+      - POSTGRES_DB=spatialforge
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spatialforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════════════════════
+  # Cache & Message Broker (Redis)
+  # ═══════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ═══════════════════════════════════════════
+  # Object Storage (MinIO — S3-compatible)
+  # ═══════════════════════════════════════════
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"  # Console
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+
+  # ═══════════════════════════════════════════
+  # MinIO Bucket Initialization
+  # ═══════════════════════════════════════════
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/spatialforge --ignore-existing;
+      mc anonymous set download myminio/spatialforge/exports;
+      echo 'MinIO bucket initialized';
+      "
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  ml-models:
