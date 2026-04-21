@@ -47,12 +47,12 @@ export default function ProjectEditorPage() {
             />
           </div>
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[200px]">
+          <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as string)} className="w-[200px]">
             <TabsList className="grid w-full grid-cols-2 bg-background/50 border border-white/10 backdrop-blur rounded-lg h-10">
-              <TabsTrigger value="2d" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary rounded-md transition-all">
+              <TabsTrigger value="2d" className="data-active:bg-primary/20 data-active:text-primary rounded-md transition-all">
                 2D Plan
               </TabsTrigger>
-              <TabsTrigger value="3d" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary rounded-md transition-all">
+              <TabsTrigger value="3d" className="data-active:bg-primary/20 data-active:text-primary rounded-md transition-all">
                 3D Model
               </TabsTrigger>
             </TabsList>
@@ -62,8 +62,8 @@ export default function ProjectEditorPage() {
 
       {/* Main Canvas Area */}
       <div className="flex-1 relative flex gap-6 z-10">
-        {/* Context Sidebar */}
-        <div className="w-72 bg-background/60 backdrop-blur-md rounded-xl border border-white/10 flex flex-col hidden lg:flex shadow-2xl">
+        {/* Context Sidebar — hidden on small screens, visible lg+ */}
+        <div className="w-72 bg-background/60 backdrop-blur-md rounded-xl border border-white/10 hidden lg:flex flex-col shadow-2xl">
           <div className="p-4 border-b border-white/5 bg-white/[0.02]">
             <h3 className="font-semibold text-sm flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" />

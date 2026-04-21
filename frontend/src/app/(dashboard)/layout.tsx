@@ -8,11 +8,22 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950">
+      {/* Sidebar — fixed positioned, 256px wide (w-64) */}
       <Sidebar />
-      <div className="flex-1 flex flex-col pl-64 transition-all duration-300">
+
+      {/* Main content — offset by sidebar width on lg+, full width on mobile */}
+      <div className="flex-1 flex flex-col lg:pl-64 transition-all duration-300 min-w-0">
         <Header />
         <main className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:32px_32px]" />
+          {/* Subtle grid texture */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px)',
+              backgroundSize: '32px 32px',
+            }}
+          />
           {children}
         </main>
       </div>

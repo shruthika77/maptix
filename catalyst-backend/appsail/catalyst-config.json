@@ -1,0 +1,12 @@
+{
+  "deployment": {
+    "name": "maptix-3d-api",
+    "stack": "python",
+    "type": "appsail",
+    "memory": 512,
+    "build_pipeline": {
+      "build_command": "pip install -r requirements.txt",
+      "run_command": "gunicorn main:app --bind 0.0.0.0:$X_ZOHO_CATALYST_LISTEN_PORT --workers 2 --timeout 120"
+    }
+  }
+}

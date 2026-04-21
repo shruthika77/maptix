@@ -2,9 +2,9 @@
 
 import { useUIStore } from "@/stores/uiStore";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Monitor, Bell, Layers, Zap } from "lucide-react";
+import { Bell, Zap, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -19,27 +19,33 @@ export function Header() {
   const { currentFloor, setFloor } = useUIStore();
 
   return (
-    <header className="h-16 border-b border-white/5 bg-background/50 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
-      <div className="flex items-center gap-4">
-        {/* Breadcrumb or context could go here */}
-        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 px-3 py-1 gap-1.5 font-medium">
-          <Zap className="w-3.5 h-3.5 fill-primary" />
-          Live Instance
+    <header className="h-16 border-b border-white/5 bg-zinc-950/70 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
+      {/* Left — context info */}
+      <div className="flex items-center gap-3">
+        <Badge
+          variant="outline"
+          className="bg-indigo-500/10 text-indigo-300 border-indigo-500/25 px-3 py-1 gap-1.5 font-semibold text-xs"
+        >
+          <Zap className="w-3 h-3 fill-indigo-400 text-indigo-400" />
+          Maptix Live
         </Badge>
-        <span className="text-sm text-muted-foreground font-medium">Headquarters Building • Phase 1</span>
+        <span className="text-sm text-white/40 font-medium hidden sm:block">
+          Headquarters Building · Phase 1
+        </span>
       </div>
 
-      <div className="flex items-center gap-3">
-        {/* Floor Selector Mock */}
-        <div className="bg-white/5 rounded-lg p-1 mr-2 flex border border-white/10">
+      {/* Right — controls */}
+      <div className="flex items-center gap-2">
+        {/* Floor Selector */}
+        <div className="bg-white/5 rounded-lg p-1 flex border border-white/10 mr-1">
           {[1, 2, 3].map((f) => (
             <button
               key={f}
               onClick={() => setFloor(f.toString())}
-              className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+              className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
                 currentFloor === f.toString()
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-white hover:bg-white/10"
+                  ? "bg-indigo-500 text-white shadow-sm shadow-indigo-500/30"
+                  : "text-white/40 hover:text-white hover:bg-white/10"
               }`}
             >
               L{f}
@@ -47,27 +53,65 @@ export function Header() {
           ))}
         </div>
 
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white rounded-full">
-          <Bell className="h-4 w-4" />
+        {/* Theme toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white/40 hover:text-white rounded-full h-9 w-9"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          title="Toggle theme"
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
         </Button>
 
+        {/* Notifications */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white/40 hover:text-white rounded-full h-9 w-9 relative"
+        >
+          <Bell className="h-4 w-4" />
+          {/* Notification dot */}
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+        </Button>
+
+        {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full overflow-hidden border border-white/10">
-              <span className="h-full w-full bg-gradient-to-tr from-violet-500 to-orange-300 flex items-center justify-center text-white text-xs font-bold">
-                JD
-              </span>
-            </Button>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full overflow-hidden border border-white/10 h-9 w-9 p-0"
+              />
+            }
+          >
+            <span className="h-full w-full bg-gradient-to-tr from-indigo-500 to-violet-400 flex items-center justify-center text-white text-xs font-bold">
+              AC
+            </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur border-white/10">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuContent
+            align="end"
+            className="w-52 bg-zinc-900/95 backdrop-blur border-white/10"
+          >
+            <DropdownMenuLabel className="text-white/70">
+              <div className="font-semibold text-white">Alex Chen</div>
+              <div className="text-xs text-white/40 font-normal">architect@maptix.io</div>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Billing</DropdownMenuItem>
-            <DropdownMenuItem>Team</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">Billing</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer">Team</DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              Toggle Theme
+            <DropdownMenuItem
+              className="cursor-pointer text-red-400 focus:text-red-400"
+              onClick={() => {}}
+            >
+              Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

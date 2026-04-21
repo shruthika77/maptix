@@ -27,9 +27,10 @@ export default function UploadFlowPage() {
     }
   });
 
-  const removeFile = (name: string) => {
-    setFiles(files.filter(f => f.name !== name));
-  };
+  // FIX: use functional update form to avoid stale closure over `files`
+  const removeFile = useCallback((name: string) => {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
+  }, []);
 
   const handleUpload = () => {
     if (files.length === 0) return;

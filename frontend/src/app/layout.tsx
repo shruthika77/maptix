@@ -6,8 +6,8 @@ import Providers from "@/components/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SpatialForge | Next-Gen Indoor Mapping",
-  description: "Advanced indoor mapping and navigation platform",
+  title: "Maptix | Next-Gen Indoor Mapping",
+  description: "Maptix — Advanced indoor mapping, 3D visualization and navigation platform.",
 };
 
 export default function RootLayout({

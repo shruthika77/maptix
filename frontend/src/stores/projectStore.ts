@@ -39,13 +39,13 @@ interface ProjectState {
   currentProject: Project | null;
   spatialModel: any | null;
   activeJob: ProcessingJob | null;
-  activeView: '2d' | '3d' | 'upload' | 'prompt';
+  activeView: '2d' | '3d' | 'upload' | 'prompt' | 'create';
   selectedElement: any | null;
 
   setCurrentProject: (project: Project | null) => void;
   setSpatialModel: (model: any | null) => void;
   setActiveJob: (job: ProcessingJob | null) => void;
-  setActiveView: (view: '2d' | '3d' | 'upload' | 'prompt') => void;
+  setActiveView: (view: '2d' | '3d' | 'upload' | 'prompt' | 'create') => void;
   setSelectedElement: (element: any | null) => void;
   updateJobProgress: (progress: number, stage: string) => void;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { Suspense, useState, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import {
   OrbitControls,
@@ -12,9 +12,6 @@ import {
   Environment,
 } from '@react-three/drei';
 import * as THREE from 'three';
-import { Button } from '@/components/ui/button';
-import { Cuboid, Layers } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 function WallMesh({ wall, height, isWireframe }: { wall: any; height: number; isWireframe: boolean }) {
   const start = wall.start;
@@ -181,47 +178,66 @@ function ProceduralModel({ spatialModel, isWireframe }: { spatialModel: any; isW
   );
 }
 
-export default function Canvas3D({ spatialModel, isWireframe }: { spatialModel: any, isWireframe: boolean }) {
-  const bbox = spatialModel?.metadata?.bounding_box;
-  const modelW = bbox ? bbox.max.x - bbox.min.x : 12;
-  const modelD = bbox ? bbox.max.y - bbox.min.y : 10;
-  const maxDim = Math.max(modelW, modelD, 10);
-  const camDist = maxDim * 1.2;
-  const camPos: [number, number, number] = [
-    (bbox ? (bbox.min.x + bbox.max.x) / 2 : 6) + camDist * 0.6,
-    camDist * 0.6,
-    (bbox ? (bbox.min.y + bbox.max.y) / 2 : 5) + camDist * 0.6,
-  ];
+export default function Canvas3D({
+  spatialModel,
+  isWireframe,
+}: {
+  spatialModel: any;
+  isWireframe: boolean;
+}) {
+  // Derive camera / target from bounding box — memoised to avoid recalculation
+  const { camPos, orbitTarget } = useMemo(() => {
+    const bbox = spatialModel?.metadata?.bounding_box;
+    const modelW  = bbox ? bbox.max.x - bbox.min.x : 12;
+    const modelD  = bbox ? bbox.max.y - bbox.min.y : 10;
+    const maxDim  = Math.max(modelW, modelD, 10);
+    const camDist = maxDim * 1.2;
+
+    const cx = bbox ? (bbox.min.x + bbox.max.x) / 2 : 6;
+    const cz = bbox ? (bbox.min.y + bbox.max.y) / 2 : 5;
+
+    return {
+      camPos:      [cx + camDist * 0.6, camDist * 0.6, cz + camDist * 0.6] as [number, number, number],
+      orbitTarget: new THREE.Vector3(cx, 0, cz),
+    };
+  }, [spatialModel]);
 
   return (
-    <Canvas shadows>
-      <PerspectiveCamera makeDefault position={camPos} fov={50} />
-      <ambientLight intensity={0.4} />
-      <directionalLight 
-        position={[15, 20, 15]} 
-        intensity={1.5} 
-        castShadow 
-        shadow-mapSize={[2048, 2048]}
-      />
-      <pointLight position={[6, 5, 5]} intensity={0.5} color="#38bdf8" />
-      <Environment preset="city" />
+    <Canvas
+      shadows
+      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      style={{ background: 'transparent' }}
+    >
+      <PerspectiveCamera makeDefault position={camPos} fov={50} near={0.1} far={1000} />
 
+      {/* Lights */}
+      <ambientLight intensity={0.5} />
+      <directionalLight
+        position={[15, 20, 15]}
+        intensity={1.2}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+      />
+      <pointLight position={[6, 5, 5]} intensity={0.4} color="#38bdf8" />
+
+      {/* Environment — wrapped in Suspense so HDRI loading doesn't block render */}
+      <Suspense fallback={null}>
+        <Environment preset="city" />
+      </Suspense>
+
+      {/* Controls */}
       <OrbitControls
         makeDefault
         enableDamping
-        dampingFactor={0.05}
+        dampingFactor={0.06}
         maxPolarAngle={Math.PI / 2.05}
-        target={
-          spatialModel?.metadata?.bounding_box
-            ? [
-                (spatialModel.metadata.bounding_box.min.x + spatialModel.metadata.bounding_box.max.x) / 2,
-                0,
-                (spatialModel.metadata.bounding_box.min.y + spatialModel.metadata.bounding_box.max.y) / 2,
-              ]
-            : [6, 0, 5]
-        }
+        minDistance={2}
+        maxDistance={100}
+        target={orbitTarget}
       />
 
+      {/* Ground grid */}
       <Grid
         args={[100, 100]}
         cellSize={1}
@@ -230,14 +246,16 @@ export default function Canvas3D({ spatialModel, isWireframe }: { spatialModel: 
         sectionSize={5}
         sectionThickness={1}
         sectionColor="#475569"
-        fadeDistance={50}
+        fadeDistance={60}
         position={[0, -0.01, 0]}
       />
 
+      {/* Procedural building geometry */}
       {spatialModel && (
         <ProceduralModel spatialModel={spatialModel} isWireframe={isWireframe} />
       )}
 
+      {/* Orientation gizmo */}
       <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
         <GizmoViewport />
       </GizmoHelper>

@@ -1,0 +1,13 @@
+{
+  "deployment": {
+    "name": "maptix-3d-api",
+    "stack": "python",
+    "type": "appsail"
+  },
+  "routing": [
+    {
+      "path": "/*",
+      "target": "maptix-3d-api"
+    }
+  ]
+}

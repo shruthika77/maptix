@@ -1,0 +1,104 @@
+{
+  "functions": [
+    {
+      "name": "maptix_api",
+      "type": "advancedio",
+      "stack": "node18",
+      "entry_point": "index.js",
+      "display_name": "Maptix 3D API",
+      "description": "Indoor Mapping & 3D Reconstruction Platform — Serverless Backend",
+      "memory_mb": 512,
+      "timeout_ms": 120000
+    }
+  ],
+  "datastore": {
+    "tables": [
+      {
+        "table_name": "Users",
+        "columns": [
+          { "column_name": "email", "data_type": "text", "is_mandatory": true, "is_unique": true },
+          { "column_name": "hashed_password", "data_type": "text", "is_mandatory": true },
+          { "column_name": "name", "data_type": "text", "is_mandatory": true },
+          { "column_name": "is_active", "data_type": "text", "default_value": "true" },
+          { "column_name": "created_at", "data_type": "text" },
+          { "column_name": "updated_at", "data_type": "text" }
+        ]
+      },
+      {
+        "table_name": "Projects",
+        "columns": [
+          { "column_name": "owner_id", "data_type": "text", "is_mandatory": true },
+          { "column_name": "name", "data_type": "text", "is_mandatory": true },
+          { "column_name": "description", "data_type": "text" },
+          { "column_name": "building_type", "data_type": "text", "default_value": "residential" },
+          { "column_name": "status", "data_type": "text", "default_value": "draft" },
+          { "column_name": "created_at", "data_type": "text" },
+          { "column_name": "updated_at", "data_type": "text" }
+        ]
+      },
+      {
+        "table_name": "ProjectFiles",
+        "columns": [
+          { "column_name": "project_id", "data_type": "text", "is_mandatory": true },
+          { "column_name": "original_filename", "data_type": "text", "is_mandatory": true },
+          { "column_name": "stored_filename", "data_type": "text" },
+          { "column_name": "mime_type", "data_type": "text" },
+          { "column_name": "size_bytes", "data_type": "text" },
+          { "column_name": "file_id", "data_type": "text" },
+          { "column_name": "status", "data_type": "text", "default_value": "uploaded" },
+          { "column_name": "uploaded_at", "data_type": "text" }
+        ]
+      },
+      {
+        "table_name": "ProcessingJobs",
+        "columns": [
+          { "column_name": "project_id", "data_type": "text", "is_mandatory": true },
+          { "column_name": "status", "data_type": "text", "default_value": "queued" },
+          { "column_name": "progress", "data_type": "text", "default_value": "0" },
+          { "column_name": "current_stage", "data_type": "text" },
+          { "column_name": "stages_json", "data_type": "text" },
+          { "column_name": "error", "data_type": "text" },
+          { "column_name": "created_at", "data_type": "text" },
+          { "column_name": "started_at", "data_type": "text" },
+          { "column_name": "completed_at", "data_type": "text" }
+        ]
+      },
+      {
+        "table_name": "SpatialModels",
+        "columns": [
+          { "column_name": "project_id", "data_type": "text", "is_mandatory": true, "is_unique": true },
+          { "column_name": "version", "data_type": "text", "default_value": "1" },
+          { "column_name": "model_data_json", "data_type": "text" },
+          { "column_name": "wall_count", "data_type": "text", "default_value": "0" },
+          { "column_name": "room_count", "data_type": "text", "default_value": "0" },
+          { "column_name": "door_count", "data_type": "text", "default_value": "0" },
+          { "column_name": "window_count", "data_type": "text", "default_value": "0" },
+          { "column_name": "total_area_sqm", "data_type": "text", "default_value": "0" },
+          { "column_name": "floor_count", "data_type": "text", "default_value": "1" },
+          { "column_name": "average_confidence", "data_type": "text", "default_value": "0" },
+          { "column_name": "model_3d_path", "data_type": "text" },
+          { "column_name": "created_at", "data_type": "text" },
+          { "column_name": "updated_at", "data_type": "text" }
+        ]
+      }
+    ]
+  },
+  "filestore": {
+    "folders": [
+      {
+        "folder_name": "uploads",
+        "description": "Uploaded floor plan images and PDFs"
+      },
+      {
+        "folder_name": "models",
+        "description": "Generated 3D models and exports"
+      }
+    ]
+  },
+  "env_variables": {
+    "CF_ACCOUNT_ID": "SET_VIA_ENVIRONMENT",
+    "CF_API_TOKEN": "SET_VIA_ENVIRONMENT",
+    "JWT_SECRET": "maptix-catalyst-production-secret-change-me",
+    "NODE_ENV": "production"
+  }
+}

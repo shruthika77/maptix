@@ -1,0 +1,14 @@
+{
+  "project_name": "MapSys",
+  "project_id": null,
+  "env": "Development",
+  "functions": {
+    "maptix_api": {
+      "type": "advancedio",
+      "language": "node18",
+      "entry_point": "index.js",
+      "memory": 512,
+      "timeout": 120000
+    }
+  }
+}

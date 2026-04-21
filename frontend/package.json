@@ -13,12 +13,13 @@
     "@react-three/drei": "^9.106.0",
     "@react-three/fiber": "^8.16.8",
     "@tanstack/react-query": "^5.99.0",
+    "caniuse-lite": "^1.0.30001788",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "konva": "^9.3.12",
-    "lucide-react": "^1.8.0",
-    "next": "^14.2.4",
+    "lucide-react": "^0.462.0",
+    "next": "14.2.4",
     "next-themes": "^0.4.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -41,6 +42,6 @@
     "eslint-config-next": "^14.2.4",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
