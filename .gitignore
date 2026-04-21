@@ -1,8 +1,11 @@
 # Dependencies
 node_modules/
 
-# Environment
+# Environment — NEVER commit .env files with real secrets
 .env
+.env.local
+.env.production
+.env.*.local
 
 # Python cache
 __pycache__/
@@ -14,4 +17,5 @@ __pycache__/
 out/
 
 # OS files
-.DS_Store 
+.DS_Store
+Thumbs.db 
