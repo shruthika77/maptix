@@ -2,6 +2,9 @@
 Project CRUD endpoints.
 """
 
+import logging
+import shutil
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +15,9 @@ from pydantic import BaseModel
 from app.db.session import get_db
 from app.db.models import Project
 from app.core.auth import get_current_user
+from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -30,15 +36,25 @@ class ProjectUpdate(BaseModel):
 
 @router.get("")
 async def list_projects(
+    limit: int = Query(default=50, ge=1, le=200, description="Max projects to return"),
+    offset: int = Query(default=0, ge=0, description="Number of projects to skip"),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """List all projects for the current user."""
+    """List all projects for the current user (paginated)."""
+    # Get total count
+    count_q = select(func.count()).select_from(Project).where(
+        Project.owner_id == current_user.id
+    )
+    total = (await db.execute(count_q)).scalar()
+
     query = (
         select(Project)
         .where(Project.owner_id == current_user.id)
         .options(selectinload(Project.files), selectinload(Project.spatial_model))
         .order_by(Project.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     result = await db.execute(query)
     projects = result.scalars().all()
@@ -77,7 +93,9 @@ async def list_projects(
             }
             for p in projects
         ],
-        "total": len(projects),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
     }
 
 
@@ -184,7 +202,7 @@ async def delete_project(
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Delete a project and all associated data."""
+    """Delete a project and all associated data (DB records + files on disk)."""
     query = select(Project).where(
         Project.id == project_id, Project.owner_id == current_user.id
     )
@@ -194,4 +212,18 @@ async def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Delete the DB records (cascade handles files, jobs, spatial_model)
     await db.delete(project)
+    await db.commit()
+
+    # Clean up uploaded files and model files from disk
+    upload_dir = Path(settings.UPLOAD_DIR) / project_id
+    model_dir = Path(settings.MODELS_DIR) / project_id
+
+    for dir_path in (upload_dir, model_dir):
+        if dir_path.exists():
+            try:
+                shutil.rmtree(dir_path)
+                logger.info(f"Deleted project directory: {dir_path}")
+            except OSError as e:
+                logger.warning(f"Failed to delete directory {dir_path}: {e}")

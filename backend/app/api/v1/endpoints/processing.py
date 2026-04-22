@@ -5,7 +5,7 @@ Uses asyncio background tasks for processing.
 
 import asyncio
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -165,7 +165,7 @@ async def run_processing_pipeline(project_id: str, job_id: str):
                 s = "failed"
             if progress >= 100:
                 s = "completed"
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             
             if error:
                 conn.execute(
@@ -519,7 +519,7 @@ async def run_processing_pipeline(project_id: str, job_id: str):
             "version": "1.0.0",
             "metadata": {
                 "source": "maptix-pipeline",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "coordinate_system": "cartesian",
                 "unit": "meters",
                 "bounding_box": {
@@ -559,7 +559,7 @@ async def run_processing_pipeline(project_id: str, job_id: str):
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=10000")
         try:
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             model_json = json_module.dumps(spatial_model)
             
             # Check if model already exists

@@ -11,7 +11,7 @@ No ML/AI needed — uses intelligent rule-based layout generation:
 import uuid
 import re
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Optional, Tuple
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
@@ -241,7 +241,6 @@ def _extract_rooms(text: str, building_type: str) -> List[RoomSpec]:
         (r'bed\s*lift', 'lift', 'Bed Lift'),
         (r'bed\s*room', 'bedroom', 'Bedroom'),
         (r'bath\s*room', 'bathroom', 'Bathroom'),
-        (r'bed\s*room', 'bedroom', 'Bedroom'),
         (r'stair\s*case', 'staircase', 'Staircase'),
         (r'bedroom', 'bedroom', 'Bedroom'),
         (r'bathroom', 'bathroom', 'Bathroom'),
@@ -811,8 +810,7 @@ async def generate_from_prompt(
         "version": "1.0.0",
         "metadata": {
             "source": "prompt-generator",
-            "prompt": request.prompt,
-            "created_at": datetime.utcnow().isoformat(),
+"created_at": datetime.now(timezone.utc).isoformat(),
             "coordinate_system": "cartesian",
             "unit": "meters",
             "bounding_box": {

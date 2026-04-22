@@ -5,21 +5,51 @@ FREE configuration:
 - SQLite database (zero config, auto-created)
 - Local filesystem storage (no S3/MinIO)
 - In-process background tasks (no Redis/Celery)
-- JWT auth (no external auth service)
+- JWT or Catalyst auth (configurable)
 
 Just run: uvicorn app.main:app --reload --port 8000
 """
 
+import logging
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import structlog
 
 import sqlalchemy
 from app.config import settings
 from app.api.v1 import router as api_v1_router
 from app.db.session import engine, Base
+
+# ── Configure structlog ──
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.dev.set_exc_info,
+        structlog.processors.TimeStamper(fmt="iso"),
+        (
+            structlog.dev.ConsoleRenderer()
+            if settings.ENVIRONMENT == "development"
+            else structlog.processors.JSONRenderer()
+        ),
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(
+        logging.DEBUG if settings.DEBUG else logging.INFO
+    ),
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+# Also configure standard logging to use structlog
+logging.basicConfig(
+    format="%(message)s",
+    stream=sys.stdout,
+    level=logging.DEBUG if settings.DEBUG else logging.INFO,
+)
 
 logger = structlog.get_logger()
 
@@ -52,10 +82,14 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS — allow frontend
+# CORS — use configured origins (falls back to ["*"] only in development)
+_cors_origins = (
+    ["*"] if settings.ENVIRONMENT == "development" and not settings.CORS_ORIGINS
+    else settings.CORS_ORIGINS
+)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in dev
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

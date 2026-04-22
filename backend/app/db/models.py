@@ -4,7 +4,7 @@ Uses SQLite — no PostgreSQL or PostGIS needed.
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, DateTime,
     ForeignKey, Text, JSON
@@ -18,6 +18,11 @@ def gen_uuid():
     return str(uuid.uuid4())
 
 
+def _utcnow():
+    """Return timezone-aware UTC datetime (Python 3.12+ compatible)."""
+    return datetime.now(timezone.utc)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -26,8 +31,8 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     name = Column(String(100), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 
@@ -41,8 +46,8 @@ class Project(Base):
     description = Column(Text, nullable=True)
     building_type = Column(String(50), default="residential")
     status = Column(String(20), default="draft")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     owner = relationship("User", back_populates="projects")
     files = relationship("ProjectFile", back_populates="project", cascade="all, delete-orphan")
@@ -61,7 +66,7 @@ class ProjectFile(Base):
     size_bytes = Column(Integer, nullable=False)
     storage_path = Column(String(500), nullable=False)
     status = Column(String(20), default="uploaded")
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    uploaded_at = Column(DateTime, default=_utcnow)
 
     project = relationship("Project", back_populates="files")
 
@@ -76,7 +81,7 @@ class ProcessingJob(Base):
     current_stage = Column(String(50), nullable=True)
     stages = Column(JSON, default=list)
     error = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
@@ -101,7 +106,7 @@ class SpatialModel(Base):
 
     model_3d_path = Column(String(500), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     project = relationship("Project", back_populates="spatial_model")

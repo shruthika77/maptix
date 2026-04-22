@@ -9,14 +9,15 @@ const nextConfig = {
     return config;
   },
 
-  // API proxy — forward /v1/* to the FastAPI backend in development.
-  // When the backend is not running, Next.js will return a 500/502 to the fetch
-  // which gets caught by the try/catch in our API service layer.
+  // API proxy — forward /v1/* to the backend.
+  // Uses NEXT_PUBLIC_API_URL env var if set (e.g. Catalyst AppSail URL),
+  // otherwise defaults to local FastAPI backend at localhost:8000.
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
       {
         source: '/v1/:path*',
-        destination: 'http://localhost:8000/v1/:path*',
+        destination: `${backendUrl}/v1/:path*`,
       },
     ];
   },

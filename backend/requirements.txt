@@ -1,25 +1,29 @@
-# ── Core Framework ──
+# -- Core Framework --
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.3
 pydantic-settings==2.1.0
 python-multipart==0.0.6
 python-jose[cryptography]==3.3.0
+bcrypt==4.1.2
 passlib[bcrypt]==1.7.4
 
-# ── Database (SQLite - zero config, no external DB needed) ──
+# -- Async HTTP Client (for Catalyst REST API auth) --
+httpx==0.25.2
+
+# -- Database (SQLite - zero config) --
 sqlalchemy==2.0.23
 aiosqlite==0.19.0
 
-# ── Image Processing ──
+# -- Image Processing --
 opencv-python-headless==4.8.1.78
 Pillow==10.1.0
 numpy==1.24.4
 
-# ── AI Integration (Cloudflare Workers AI / Meta Llama 3) ──
+# -- AI Integration (Cloudflare Workers AI) --
 requests==2.31.0
 
-# ── Utilities ──
+# -- Utilities --
 structlog==23.2.0
 orjson==3.9.10
 python-dotenv==1.0.0

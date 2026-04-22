@@ -16,7 +16,7 @@ import numpy as np
 import cv2
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
 from app.api.v1.endpoints.generate import (
@@ -504,7 +504,7 @@ def _run_cv_ai_pipeline(image: np.ndarray, building_type: str, is_pdf: bool = Fa
             "total_area_sqm": round(ta, 2),
             "source": "cv-ai-pipeline" if ai_used else "cv-pipeline",
             "ai_enhanced": ai_used,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "coordinate_system": "cartesian",
             "unit": "meters",
             "bounding_box": {
@@ -549,7 +549,7 @@ def _build_response(floor_data_list, building_type, prompt, plot_width, plot_len
             "total_area_sqm": round(total_area, 2),
             "source": "ai-prompt-generator",
             "prompt": prompt,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "coordinate_system": "cartesian",
             "unit": "meters",
             "bounding_box": {

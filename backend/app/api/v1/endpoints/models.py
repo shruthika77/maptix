@@ -7,10 +7,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.db.session import get_db
-from app.db.models import SpatialModel
+from app.db.models import Project, SpatialModel
 from app.core.auth import get_current_user
 
 router = APIRouter()
+
+
+async def _verify_project_ownership(
+    project_id: str, current_user, db: AsyncSession
+) -> "Project":
+    """Verify the project exists and belongs to the current user."""
+    query = select(Project).where(
+        Project.id == project_id, Project.owner_id == current_user.id
+    )
+    project = (await db.execute(query)).scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 
 @router.get("")
@@ -20,6 +33,8 @@ async def get_spatial_model(
     current_user=Depends(get_current_user),
 ):
     """Get the unified spatial model for a project."""
+    await _verify_project_ownership(project_id, current_user, db)
+
     query = select(SpatialModel).where(SpatialModel.project_id == project_id)
     result = await db.execute(query)
     model = result.scalar_one_or_none()
@@ -55,6 +70,8 @@ async def update_spatial_model(
     current_user=Depends(get_current_user),
 ):
     """Update the spatial model (manual edits from the 2D editor)."""
+    await _verify_project_ownership(project_id, current_user, db)
+
     query = select(SpatialModel).where(SpatialModel.project_id == project_id)
     result = await db.execute(query)
     model = result.scalar_one_or_none()

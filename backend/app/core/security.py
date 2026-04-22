@@ -3,7 +3,7 @@ Security utilities: password hashing, JWT token creation/verification.
 Uses bcrypt directly (avoids passlib compatibility issues).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import bcrypt
 from jose import JWTError, jwt
 
@@ -29,8 +29,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
+    """Create a JWT access token with expiration."""
     to_encode = data.copy()
-    expire = datetime.utcnow() + (
+    expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     )
     to_encode.update({"exp": expire})
@@ -38,6 +39,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
 
 
 def decode_token(token: str) -> dict:
+    """Decode and validate a JWT token. Returns payload dict or None."""
     try:
         payload = jwt.decode(
             token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
